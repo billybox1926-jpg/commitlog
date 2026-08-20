@@ -50,9 +50,7 @@ class TestGetCommits(unittest.TestCase):
     def test_get_commits_basic(self):
         """Test basic commit retrieval."""
         with patch("commitlog.run_git") as mock_git:
-            mock_git.return_value = (
-                "abc123\tfeat: add feature\tTest User\t2026-01-01"
-            )
+            mock_git.return_value = "abc123\tfeat: add feature\tTest User\t2026-01-01"
             commits = commitlog.get_commits()
             self.assertEqual(len(commits), 1)
             self.assertEqual(commits[0]["hash"], "abc123")
@@ -61,9 +59,7 @@ class TestGetCommits(unittest.TestCase):
     def test_get_commits_with_since(self):
         """Test commit retrieval with since parameter."""
         with patch("commitlog.run_git") as mock_git:
-            mock_git.return_value = (
-                "abc123\tfeat: add feature\tTest User\t2026-01-01"
-            )
+            mock_git.return_value = "abc123\tfeat: add feature\tTest User\t2026-01-01"
             commitlog.get_commits(since="v0.1.0")
             mock_git.assert_called_once()
             call_args = mock_git.call_args[0][0]
@@ -72,9 +68,7 @@ class TestGetCommits(unittest.TestCase):
     def test_get_commits_with_until(self):
         """Test commit retrieval with until parameter."""
         with patch("commitlog.run_git") as mock_git:
-            mock_git.return_value = (
-                "abc123\tfeat: add feature\tTest User\t2026-01-01"
-            )
+            mock_git.return_value = "abc123\tfeat: add feature\tTest User\t2026-01-01"
             commitlog.get_commits(since="v0.1.0", until="v0.2.0")
             mock_git.assert_called_once()
             call_args = mock_git.call_args[0][0]
@@ -83,9 +77,7 @@ class TestGetCommits(unittest.TestCase):
     def test_get_commits_with_path(self):
         """Test commit retrieval with path filter."""
         with patch("commitlog.run_git") as mock_git:
-            mock_git.return_value = (
-                "abc123\tfeat: add feature\tTest User\t2026-01-01"
-            )
+            mock_git.return_value = "abc123\tfeat: add feature\tTest User\t2026-01-01"
             commitlog.get_commits(path="src/")
             mock_git.assert_called_once()
             call_args = mock_git.call_args[0][0]
@@ -329,9 +321,7 @@ class TestGenerateMarkdown(unittest.TestCase):
         self.assertIn("[BREAKING]", output)
 
     def test_empty_sections(self):
-        output = commitlog.generate_markdown(
-            {}, version="v1.0.0", date="2026-01-01"
-        )
+        output = commitlog.generate_markdown({}, version="v1.0.0", date="2026-01-01")
         self.assertIn("## v1.0.0 (2026-01-01)", output)
 
     def test_with_repo_url(self):
@@ -342,9 +332,7 @@ class TestGenerateMarkdown(unittest.TestCase):
             date="2026-01-01",
             repo_url="https://github.com/user/repo",
         )
-        self.assertIn(
-            "https://github.com/user/repo/commit/abc1234567890", output
-        )
+        self.assertIn("https://github.com/user/repo/commit/abc1234567890", output)
 
 
 class TestGenerateText(unittest.TestCase):
@@ -362,9 +350,7 @@ class TestGenerateText(unittest.TestCase):
                 }
             ]
         }
-        output = commitlog.generate_text(
-            sections, version="v1.0.0", date="2026-01-01"
-        )
+        output = commitlog.generate_text(sections, version="v1.0.0", date="2026-01-01")
         self.assertIn("v1.0.0 (2026-01-01)", output)
         self.assertIn("Features:", output)
         self.assertIn("[api] add feature", output)
@@ -381,9 +367,7 @@ class TestGenerateText(unittest.TestCase):
                 }
             ]
         }
-        output = commitlog.generate_text(
-            sections, version="v1.0.0", date="2026-01-01"
-        )
+        output = commitlog.generate_text(sections, version="v1.0.0", date="2026-01-01")
         self.assertIn("add feature", output)
 
 
@@ -404,18 +388,14 @@ class TestGenerateJson(unittest.TestCase):
                 }
             ]
         }
-        output = commitlog.generate_json(
-            sections, version="v1.0.0", date="2026-01-01"
-        )
+        output = commitlog.generate_json(sections, version="v1.0.0", date="2026-01-01")
         parsed = json.loads(output)
         self.assertEqual(parsed["version"], "v1.0.0")
         self.assertIn("features", parsed["sections"])
         self.assertEqual(parsed["sections"]["features"][0]["scope"], "api")
 
     def test_empty_json(self):
-        output = commitlog.generate_json(
-            {}, version="v1.0.0", date="2026-01-01"
-        )
+        output = commitlog.generate_json({}, version="v1.0.0", date="2026-01-01")
         parsed = json.loads(output)
         self.assertEqual(parsed["sections"], {})
 
@@ -566,9 +546,7 @@ class TestGenerateCommand(unittest.TestCase):
         """Test generate command writes to file."""
         with patch("commitlog.get_commits") as mock_commits:
             mock_commits.return_value = [self._mock_commit()]
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".md", delete=False
-            ) as f:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
                 output_path = f.name
 
             try:
