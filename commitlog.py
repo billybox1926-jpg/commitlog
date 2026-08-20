@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """commitlog - local release-note generator.
 
-Reads conventional commits from a repo and generates release notes, changelog entries, or JSON metadata.
+Reads conventional commits from a repo and generates release notes,
+changelog entries, or JSON metadata.
 Zero-dependency, local-only CLI tool.
 """
 
@@ -16,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 CONVENTIONAL_COMMIT_PATTERN = re.compile(r"^(\w+)(\(([^)]+)\))?!?:\s+(.+)$")
 
@@ -35,6 +36,10 @@ TYPE_LABELS = {
 
 # Types that get their own section
 SPECIAL_TYPES = {"feat", "fix", "docs"}
+
+# Breaking change patterns
+BREAKING_MARKER_PATTERN = re.compile(r"^(\w+)(\(([^)]+)\))?!:")
+BREAKING_CHANGE_PATTERN = re.compile(r"BREAKING[- ]CHANGE\s*:", re.IGNORECASE)
 
 
 def run_git(args: list[str], cwd: str | None = None) -> str:
@@ -60,10 +65,16 @@ def get_commits(
     since: str | None = None,
     until: str | None = None,
     path: str | None = None,
+    include_body: bool = False,
 ) -> list[dict[str, Any]]:
     """Get commits from git log."""
-    format_str = "%H%x09%s%x09%an%x09%ad"
-    args = ["log", f"--pretty=format:{format_str}", "--date=short"]
+    if include_body:
+        # Use -z for null-separated commits, include body (%B)
+        format_str = "%H%x09%s%x09%an%x09%ad%x09%B"
+        args = ["log", "-z", f"--pretty=format:{format_str}", "--date=short"]
+    else:
+        format_str = "%H%x09%s%x09%an%x09%ad"
+        args = ["log", f"--pretty=format:{format_str}", "--date=short"]
 
     if since:
         if until:
@@ -81,10 +92,20 @@ def get_commits(
         return []
 
     commits = []
-    for line in output.split("\n"):
-        parts = line.split("\t")
+    if include_body:
+        # Split by null byte for commits
+        commit_blocks = output.split("\x00")
+    else:
+        commit_blocks = output.split("\n")
+
+    for block in commit_blocks:
+        if not block:
+            continue
+        parts = block.split("\t")
         if len(parts) >= 4:
             commit_hash, subject, author, date = parts[0], parts[1], parts[2], parts[3]
+            # Body is everything after the 4th field (joined back with tabs)
+            body = "\t".join(parts[4:]) if len(parts) > 4 else ""
             commits.append(
                 {
                     "hash": commit_hash,
@@ -92,14 +113,15 @@ def get_commits(
                     "subject": subject,
                     "author": author,
                     "date": date,
+                    "body": body,
                 }
             )
 
     return commits
 
 
-def parse_conventional_commit(subject: str) -> dict[str, Any] | None:
-    """Parse a conventional commit subject line."""
+def parse_conventional_commit(subject: str, body: str = "") -> dict[str, Any] | None:
+    """Parse a conventional commit subject line and body."""
     match = CONVENTIONAL_COMMIT_PATTERN.match(subject)
     if not match:
         return None
@@ -108,8 +130,12 @@ def parse_conventional_commit(subject: str) -> dict[str, Any] | None:
     scope = match.group(3)
     description = match.group(4)
 
-    # Check for breaking change marker
-    is_breaking = "!" in subject.split(":")[0] or "BREAKING" in subject.upper()
+    # Check for breaking change markers:
+    # 1. ! marker in subject (e.g., feat!: or feat(api)!:)
+    # 2. BREAKING CHANGE: in body
+    is_breaking = BREAKING_MARKER_PATTERN.match(subject) is not None
+    if not is_breaking and body:
+        is_breaking = BREAKING_CHANGE_PATTERN.search(body) is not None
 
     return {
         "type": commit_type,
@@ -129,7 +155,7 @@ def classify_commits(commits: list[dict[str, Any]]) -> dict[str, list[dict[str, 
     }
 
     for commit in commits:
-        parsed = parse_conventional_commit(commit["subject"])
+        parsed = parse_conventional_commit(commit["subject"], commit.get("body", ""))
         if not parsed:
             sections["other"].append(commit)
             continue
@@ -166,6 +192,7 @@ def generate_markdown(
         "fixes": "Bug Fixes",
         "docs": "Documentation",
         "other": "Other",
+        "all": "Changes",
     }
 
     for section_key, title in section_titles.items():
@@ -209,6 +236,7 @@ def generate_text(
         "fixes": "Bug Fixes",
         "docs": "Documentation",
         "other": "Other",
+        "all": "Changes",
     }
 
     for section_key, title in section_titles.items():
@@ -223,9 +251,9 @@ def generate_text(
             scope = commit.get("scope")
             scope_str = f"[{scope}] " if scope else ""
             breaking = " [BREAKING]" if commit.get("is_breaking") else ""
-            lines.append(
-                f"  - {scope_str}{commit['description']}{breaking} ({commit['short_hash']})"
-            )
+            entry = f"  - {scope_str}{commit['description']}{breaking}"
+            entry += f" ({commit['short_hash']})"
+            lines.append(entry)
 
         lines.append("")
 
@@ -354,19 +382,23 @@ def generate_command(args: argparse.Namespace) -> None:
     path = args.path
     scope_filter = args.scope_filter
     no_group = args.no_group
+    include_body = args.include_body
 
     # Handle "last_tag" as since
     if since == "last_tag":
         since = get_last_tag()
 
-    commits = get_commits(since=since, until=until, path=path)
+    commits = get_commits(
+        since=since, until=until, path=path, include_body=include_body
+    )
 
     if scope_filter:
         commits = [
             c
             for c in commits
-            if parse_conventional_commit(c["subject"])
-            and parse_conventional_commit(c["subject"]).get("scope") == scope_filter
+            if parse_conventional_commit(c["subject"], c.get("body", ""))
+            and parse_conventional_commit(c["subject"], c.get("body", "")).get("scope")
+            == scope_filter
         ]
 
     sections = classify_commits(commits)
