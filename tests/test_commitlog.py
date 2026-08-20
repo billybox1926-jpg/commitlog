@@ -76,8 +76,20 @@ class TestClassifyCommits(unittest.TestCase):
 
     def test_classify_features(self):
         commits = [
-            {"subject": "feat: add feature A", "hash": "abc123", "short_hash": "abc123", "author": "test", "date": "2026-01-01"},
-            {"subject": "feat: add feature B", "hash": "def456", "short_hash": "def456", "author": "test", "date": "2026-01-02"},
+            {
+                "subject": "feat: add feature A",
+                "hash": "abc123",
+                "short_hash": "abc123",
+                "author": "test",
+                "date": "2026-01-01",
+            },
+            {
+                "subject": "feat: add feature B",
+                "hash": "def456",
+                "short_hash": "def456",
+                "author": "test",
+                "date": "2026-01-02",
+            },
         ]
         sections = commitlog.classify_commits(commits)
         self.assertIn("features", sections)
@@ -85,7 +97,13 @@ class TestClassifyCommits(unittest.TestCase):
 
     def test_classify_fixes(self):
         commits = [
-            {"subject": "fix: resolve bug", "hash": "abc123", "short_hash": "abc123", "author": "test", "date": "2026-01-01"},
+            {
+                "subject": "fix: resolve bug",
+                "hash": "abc123",
+                "short_hash": "abc123",
+                "author": "test",
+                "date": "2026-01-01",
+            },
         ]
         sections = commitlog.classify_commits(commits)
         self.assertIn("fixes", sections)
@@ -93,15 +111,33 @@ class TestClassifyCommits(unittest.TestCase):
 
     def test_classify_docs(self):
         commits = [
-            {"subject": "docs: update README", "hash": "abc123", "short_hash": "abc123", "author": "test", "date": "2026-01-01"},
+            {
+                "subject": "docs: update README",
+                "hash": "abc123",
+                "short_hash": "abc123",
+                "author": "test",
+                "date": "2026-01-01",
+            },
         ]
         sections = commitlog.classify_commits(commits)
         self.assertIn("docs", sections)
 
     def test_classify_other(self):
         commits = [
-            {"subject": "chore: cleanup", "hash": "abc123", "short_hash": "abc123", "author": "test", "date": "2026-01-01"},
-            {"subject": "refactor: simplify", "hash": "def456", "short_hash": "def456", "author": "test", "date": "2026-01-02"},
+            {
+                "subject": "chore: cleanup",
+                "hash": "abc123",
+                "short_hash": "abc123",
+                "author": "test",
+                "date": "2026-01-01",
+            },
+            {
+                "subject": "refactor: simplify",
+                "hash": "def456",
+                "short_hash": "def456",
+                "author": "test",
+                "date": "2026-01-02",
+            },
         ]
         sections = commitlog.classify_commits(commits)
         self.assertIn("other", sections)
@@ -109,10 +145,34 @@ class TestClassifyCommits(unittest.TestCase):
 
     def test_classify_mixed(self):
         commits = [
-            {"subject": "feat: new feature", "hash": "a", "short_hash": "a", "author": "t", "date": "2026-01-01"},
-            {"subject": "fix: bug fix", "hash": "b", "short_hash": "b", "author": "t", "date": "2026-01-02"},
-            {"subject": "docs: update", "hash": "c", "short_hash": "c", "author": "t", "date": "2026-01-03"},
-            {"subject": "chore: cleanup", "hash": "d", "short_hash": "d", "author": "t", "date": "2026-01-04"},
+            {
+                "subject": "feat: new feature",
+                "hash": "a",
+                "short_hash": "a",
+                "author": "t",
+                "date": "2026-01-01",
+            },
+            {
+                "subject": "fix: bug fix",
+                "hash": "b",
+                "short_hash": "b",
+                "author": "t",
+                "date": "2026-01-02",
+            },
+            {
+                "subject": "docs: update",
+                "hash": "c",
+                "short_hash": "c",
+                "author": "t",
+                "date": "2026-01-03",
+            },
+            {
+                "subject": "chore: cleanup",
+                "hash": "d",
+                "short_hash": "d",
+                "author": "t",
+                "date": "2026-01-04",
+            },
         ]
         sections = commitlog.classify_commits(commits)
         self.assertEqual(len(sections["features"]), 1)
@@ -122,7 +182,13 @@ class TestClassifyCommits(unittest.TestCase):
 
     def test_classify_non_conventional(self):
         commits = [
-            {"subject": "random message", "hash": "a", "short_hash": "a", "author": "t", "date": "2026-01-01"},
+            {
+                "subject": "random message",
+                "hash": "a",
+                "short_hash": "a",
+                "author": "t",
+                "date": "2026-01-01",
+            },
         ]
         sections = commitlog.classify_commits(commits)
         self.assertIn("other", sections)
@@ -138,10 +204,18 @@ class TestGenerateMarkdown(unittest.TestCase):
     def test_basic_markdown(self):
         sections = {
             "features": [
-                {"description": "add feature", "scope": "api", "short_hash": "abc1234", "hash": "abc1234567890", "is_breaking": False}
+                {
+                    "description": "add feature",
+                    "scope": "api",
+                    "short_hash": "abc1234",
+                    "hash": "abc1234567890",
+                    "is_breaking": False,
+                }
             ]
         }
-        output = commitlog.generate_markdown(sections, version="v1.0.0", date="2026-01-01")
+        output = commitlog.generate_markdown(
+            sections, version="v1.0.0", date="2026-01-01"
+        )
         self.assertIn("## v1.0.0 (2026-01-01)", output)
         self.assertIn("### Features", output)
         self.assertIn("**api**", output)
@@ -151,23 +225,45 @@ class TestGenerateMarkdown(unittest.TestCase):
     def test_multiple_sections(self):
         sections = {
             "features": [
-                {"description": "new feature", "scope": None, "short_hash": "a", "hash": "a", "is_breaking": False}
+                {
+                    "description": "new feature",
+                    "scope": None,
+                    "short_hash": "a",
+                    "hash": "a",
+                    "is_breaking": False,
+                }
             ],
             "fixes": [
-                {"description": "fix bug", "scope": None, "short_hash": "b", "hash": "b", "is_breaking": False}
+                {
+                    "description": "fix bug",
+                    "scope": None,
+                    "short_hash": "b",
+                    "hash": "b",
+                    "is_breaking": False,
+                }
             ],
         }
-        output = commitlog.generate_markdown(sections, version="v1.0.0", date="2026-01-01")
+        output = commitlog.generate_markdown(
+            sections, version="v1.0.0", date="2026-01-01"
+        )
         self.assertIn("Features", output)
         self.assertIn("Bug Fixes", output)
 
     def test_breaking_change(self):
         sections = {
             "features": [
-                {"description": "remove API", "scope": None, "short_hash": "a", "hash": "a", "is_breaking": True}
+                {
+                    "description": "remove API",
+                    "scope": None,
+                    "short_hash": "a",
+                    "hash": "a",
+                    "is_breaking": True,
+                }
             ]
         }
-        output = commitlog.generate_markdown(sections, version="v1.0.0", date="2026-01-01")
+        output = commitlog.generate_markdown(
+            sections, version="v1.0.0", date="2026-01-01"
+        )
         self.assertIn("[BREAKING]", output)
 
     def test_empty_sections(self):
@@ -181,7 +277,13 @@ class TestGenerateText(unittest.TestCase):
     def test_basic_text(self):
         sections = {
             "features": [
-                {"description": "add feature", "scope": "api", "short_hash": "abc1234", "hash": "abc1234567890", "is_breaking": False}
+                {
+                    "description": "add feature",
+                    "scope": "api",
+                    "short_hash": "abc1234",
+                    "hash": "abc1234567890",
+                    "is_breaking": False,
+                }
             ]
         }
         output = commitlog.generate_text(sections, version="v1.0.0", date="2026-01-01")
@@ -192,7 +294,13 @@ class TestGenerateText(unittest.TestCase):
     def test_no_scope(self):
         sections = {
             "features": [
-                {"description": "add feature", "scope": None, "short_hash": "a", "hash": "a", "is_breaking": False}
+                {
+                    "description": "add feature",
+                    "scope": None,
+                    "short_hash": "a",
+                    "hash": "a",
+                    "is_breaking": False,
+                }
             ]
         }
         output = commitlog.generate_text(sections, version="v1.0.0", date="2026-01-01")
@@ -205,7 +313,15 @@ class TestGenerateJson(unittest.TestCase):
     def test_basic_json(self):
         sections = {
             "features": [
-                {"description": "add feature", "scope": "api", "short_hash": "abc1234", "hash": "abc1234567890", "author": "test", "date": "2026-01-01", "is_breaking": False}
+                {
+                    "description": "add feature",
+                    "scope": "api",
+                    "short_hash": "abc1234",
+                    "hash": "abc1234567890",
+                    "author": "test",
+                    "date": "2026-01-01",
+                    "is_breaking": False,
+                }
             ]
         }
         output = commitlog.generate_json(sections, version="v1.0.0", date="2026-01-01")
@@ -269,10 +385,34 @@ class TestEndToEnd(unittest.TestCase):
     def test_full_workflow(self):
         """Test full commit processing workflow."""
         commits = [
-            {"subject": "feat: add user API", "hash": "a" * 40, "short_hash": "a" * 7, "author": "test", "date": "2026-01-01"},
-            {"subject": "fix: resolve login bug", "hash": "b" * 40, "short_hash": "b" * 7, "author": "test", "date": "2026-01-02"},
-            {"subject": "docs: update README", "hash": "c" * 40, "short_hash": "c" * 7, "author": "test", "date": "2026-01-03"},
-            {"subject": "chore: cleanup", "hash": "d" * 40, "short_hash": "d" * 7, "author": "test", "date": "2026-01-04"},
+            {
+                "subject": "feat: add user API",
+                "hash": "a" * 40,
+                "short_hash": "a" * 7,
+                "author": "test",
+                "date": "2026-01-01",
+            },
+            {
+                "subject": "fix: resolve login bug",
+                "hash": "b" * 40,
+                "short_hash": "b" * 7,
+                "author": "test",
+                "date": "2026-01-02",
+            },
+            {
+                "subject": "docs: update README",
+                "hash": "c" * 40,
+                "short_hash": "c" * 7,
+                "author": "test",
+                "date": "2026-01-03",
+            },
+            {
+                "subject": "chore: cleanup",
+                "hash": "d" * 40,
+                "short_hash": "d" * 7,
+                "author": "test",
+                "date": "2026-01-04",
+            },
         ]
 
         sections = commitlog.classify_commits(commits)
@@ -281,13 +421,17 @@ class TestEndToEnd(unittest.TestCase):
         self.assertEqual(len(sections["docs"]), 1)
         self.assertEqual(len(sections["other"]), 1)
 
-        markdown = commitlog.generate_markdown(sections, version="v1.0.0", date="2026-01-01")
+        markdown = commitlog.generate_markdown(
+            sections, version="v1.0.0", date="2026-01-01"
+        )
         self.assertIn("Features", markdown)
         self.assertIn("Bug Fixes", markdown)
         self.assertIn("Documentation", markdown)
         self.assertIn("Other", markdown)
 
-        json_output = commitlog.generate_json(sections, version="v1.0.0", date="2026-01-01")
+        json_output = commitlog.generate_json(
+            sections, version="v1.0.0", date="2026-01-01"
+        )
         parsed = json.loads(json_output)
         self.assertEqual(len(parsed["sections"]["features"]), 1)
 
