@@ -11,6 +11,18 @@ Reads conventional commits from a repo and generates release notes, changelog en
 ## Quick Start
 
 ```bash
+# Install the `commitlog` command
+pip install commitlog-cli
+commitlog --version
+```
+
+> The PyPI distribution is named **`commitlog-cli`** because `commitlog` was
+> already taken by an unrelated project. The installed command is still
+> `commitlog`.
+
+Or run the single file directly:
+
+```bash
 # Clone and run
 git clone https://github.com/billybox1926-jpg/commitlog.git
 cd commitlog
