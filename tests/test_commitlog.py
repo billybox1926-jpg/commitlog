@@ -8,7 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent.parent))
 
@@ -21,14 +21,18 @@ class TestRunGit(unittest.TestCase):
     def test_run_git_success(self):
         """Test successful git command."""
         with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(stdout="output\n", stderr="", returncode=0)
+            mock_run.return_value = MagicMock(
+                stdout="output\n", stderr="", returncode=0
+            )
             result = commitlog.run_git(["status"])
             self.assertEqual(result, "output")
 
     def test_run_git_failure(self):
         """Test git command failure exits."""
         with patch("subprocess.run") as mock_run:
-            mock_run.side_effect = subprocess.CalledProcessError(1, "git", stderr="error")
+            mock_run.side_effect = subprocess.CalledProcessError(
+                1, "git", stderr="error"
+            )
             with self.assertRaises(SystemExit):
                 commitlog.run_git(["status"])
 
@@ -46,7 +50,9 @@ class TestGetCommits(unittest.TestCase):
     def test_get_commits_basic(self):
         """Test basic commit retrieval."""
         with patch("commitlog.run_git") as mock_git:
-            mock_git.return_value = "abc123\tfeat: add feature\tTest User\t2026-01-01"
+            mock_git.return_value = (
+                "abc123\tfeat: add feature\tTest User\t2026-01-01"
+            )
             commits = commitlog.get_commits()
             self.assertEqual(len(commits), 1)
             self.assertEqual(commits[0]["hash"], "abc123")
@@ -55,8 +61,10 @@ class TestGetCommits(unittest.TestCase):
     def test_get_commits_with_since(self):
         """Test commit retrieval with since parameter."""
         with patch("commitlog.run_git") as mock_git:
-            mock_git.return_value = "abc123\tfeat: add feature\tTest User\t2026-01-01"
-            commits = commitlog.get_commits(since="v0.1.0")
+            mock_git.return_value = (
+                "abc123\tfeat: add feature\tTest User\t2026-01-01"
+            )
+            commitlog.get_commits(since="v0.1.0")
             mock_git.assert_called_once()
             call_args = mock_git.call_args[0][0]
             self.assertIn("v0.1.0..HEAD", call_args)
@@ -64,8 +72,10 @@ class TestGetCommits(unittest.TestCase):
     def test_get_commits_with_until(self):
         """Test commit retrieval with until parameter."""
         with patch("commitlog.run_git") as mock_git:
-            mock_git.return_value = "abc123\tfeat: add feature\tTest User\t2026-01-01"
-            commits = commitlog.get_commits(since="v0.1.0", until="v0.2.0")
+            mock_git.return_value = (
+                "abc123\tfeat: add feature\tTest User\t2026-01-01"
+            )
+            commitlog.get_commits(since="v0.1.0", until="v0.2.0")
             mock_git.assert_called_once()
             call_args = mock_git.call_args[0][0]
             self.assertIn("v0.1.0..v0.2.0", call_args)
@@ -73,8 +83,10 @@ class TestGetCommits(unittest.TestCase):
     def test_get_commits_with_path(self):
         """Test commit retrieval with path filter."""
         with patch("commitlog.run_git") as mock_git:
-            mock_git.return_value = "abc123\tfeat: add feature\tTest User\t2026-01-01"
-            commits = commitlog.get_commits(path="src/")
+            mock_git.return_value = (
+                "abc123\tfeat: add feature\tTest User\t2026-01-01"
+            )
+            commitlog.get_commits(path="src/")
             mock_git.assert_called_once()
             call_args = mock_git.call_args[0][0]
             self.assertIn("--", call_args)
@@ -100,7 +112,9 @@ class TestGetCommits(unittest.TestCase):
     def test_get_commits_with_body(self):
         """Test commit retrieval with body."""
         with patch("commitlog.run_git") as mock_git:
-            mock_git.return_value = "abc123\tfeat: add feature\tTest User\t2026-01-01\tBody text"
+            mock_git.return_value = (
+                "abc123\tfeat: add feature\tTest User\t2026-01-01\tBody text"
+            )
             commits = commitlog.get_commits(include_body=True)
             self.assertEqual(len(commits), 1)
             self.assertEqual(commits[0]["body"], "Body text")
@@ -192,34 +206,39 @@ class TestParseConventionalCommit(unittest.TestCase):
 class TestClassifyCommits(unittest.TestCase):
     """Test commit classification."""
 
+    def _make_commit(self, subject, h="a"):
+        return {
+            "subject": subject,
+            "hash": h * 40,
+            "short_hash": h * 7,
+            "author": "test",
+            "date": "2026-01-01",
+        }
+
     def test_classify_features(self):
         commits = [
-            {"subject": "feat: add feature A", "hash": "abc123", "short_hash": "abc123", "author": "test", "date": "2026-01-01"},
-            {"subject": "feat: add feature B", "hash": "def456", "short_hash": "def456", "author": "test", "date": "2026-01-02"},
+            self._make_commit("feat: add feature A"),
+            self._make_commit("feat: add feature B", "b"),
         ]
         sections = commitlog.classify_commits(commits)
         self.assertIn("features", sections)
         self.assertEqual(len(sections["features"]), 2)
 
     def test_classify_fixes(self):
-        commits = [
-            {"subject": "fix: resolve bug", "hash": "abc123", "short_hash": "abc123", "author": "test", "date": "2026-01-01"},
-        ]
+        commits = [self._make_commit("fix: resolve bug")]
         sections = commitlog.classify_commits(commits)
         self.assertIn("fixes", sections)
         self.assertEqual(len(sections["fixes"]), 1)
 
     def test_classify_docs(self):
-        commits = [
-            {"subject": "docs: update README", "hash": "abc123", "short_hash": "abc123", "author": "test", "date": "2026-01-01"},
-        ]
+        commits = [self._make_commit("docs: update README")]
         sections = commitlog.classify_commits(commits)
         self.assertIn("docs", sections)
 
     def test_classify_other(self):
         commits = [
-            {"subject": "chore: cleanup", "hash": "abc123", "short_hash": "abc123", "author": "test", "date": "2026-01-01"},
-            {"subject": "refactor: simplify", "hash": "def456", "short_hash": "def456", "author": "test", "date": "2026-01-02"},
+            self._make_commit("chore: cleanup"),
+            self._make_commit("refactor: simplify", "b"),
         ]
         sections = commitlog.classify_commits(commits)
         self.assertIn("other", sections)
@@ -227,10 +246,10 @@ class TestClassifyCommits(unittest.TestCase):
 
     def test_classify_mixed(self):
         commits = [
-            {"subject": "feat: new feature", "hash": "a", "short_hash": "a", "author": "t", "date": "2026-01-01"},
-            {"subject": "fix: bug fix", "hash": "b", "short_hash": "b", "author": "t", "date": "2026-01-02"},
-            {"subject": "docs: update", "hash": "c", "short_hash": "c", "author": "t", "date": "2026-01-03"},
-            {"subject": "chore: cleanup", "hash": "d", "short_hash": "d", "author": "t", "date": "2026-01-04"},
+            self._make_commit("feat: new feature"),
+            self._make_commit("fix: bug fix", "b"),
+            self._make_commit("docs: update", "c"),
+            self._make_commit("chore: cleanup", "d"),
         ]
         sections = commitlog.classify_commits(commits)
         self.assertEqual(len(sections["features"]), 1)
@@ -239,9 +258,7 @@ class TestClassifyCommits(unittest.TestCase):
         self.assertEqual(len(sections["other"]), 1)
 
     def test_classify_non_conventional(self):
-        commits = [
-            {"subject": "random message", "hash": "a", "short_hash": "a", "author": "t", "date": "2026-01-01"},
-        ]
+        commits = [self._make_commit("random message")]
         sections = commitlog.classify_commits(commits)
         self.assertIn("other", sections)
 
@@ -253,13 +270,24 @@ class TestClassifyCommits(unittest.TestCase):
 class TestGenerateMarkdown(unittest.TestCase):
     """Test Markdown generation."""
 
-    def test_basic_markdown(self):
-        sections = {
+    def _make_section(self, desc, scope=None, breaking=False):
+        return {
             "features": [
-                {"description": "add feature", "scope": "api", "short_hash": "abc1234", "hash": "abc1234567890", "is_breaking": False}
+                {
+                    "description": desc,
+                    "scope": scope,
+                    "short_hash": "abc1234",
+                    "hash": "abc1234567890",
+                    "is_breaking": breaking,
+                }
             ]
         }
-        output = commitlog.generate_markdown(sections, version="v1.0.0", date="2026-01-01")
+
+    def test_basic_markdown(self):
+        sections = self._make_section("add feature", "api")
+        output = commitlog.generate_markdown(
+            sections, version="v1.0.0", date="2026-01-01"
+        )
         self.assertIn("## v1.0.0 (2026-01-01)", output)
         self.assertIn("### Features", output)
         self.assertIn("**api**", output)
@@ -269,40 +297,54 @@ class TestGenerateMarkdown(unittest.TestCase):
     def test_multiple_sections(self):
         sections = {
             "features": [
-                {"description": "new feature", "scope": None, "short_hash": "a", "hash": "a", "is_breaking": False}
+                {
+                    "description": "new feature",
+                    "scope": None,
+                    "short_hash": "a",
+                    "hash": "a",
+                    "is_breaking": False,
+                }
             ],
             "fixes": [
-                {"description": "fix bug", "scope": None, "short_hash": "b", "hash": "b", "is_breaking": False}
+                {
+                    "description": "fix bug",
+                    "scope": None,
+                    "short_hash": "b",
+                    "hash": "b",
+                    "is_breaking": False,
+                }
             ],
         }
-        output = commitlog.generate_markdown(sections, version="v1.0.0", date="2026-01-01")
+        output = commitlog.generate_markdown(
+            sections, version="v1.0.0", date="2026-01-01"
+        )
         self.assertIn("Features", output)
         self.assertIn("Bug Fixes", output)
 
     def test_breaking_change(self):
-        sections = {
-            "features": [
-                {"description": "remove API", "scope": None, "short_hash": "a", "hash": "a", "is_breaking": True}
-            ]
-        }
-        output = commitlog.generate_markdown(sections, version="v1.0.0", date="2026-01-01")
+        sections = self._make_section("remove API", breaking=True)
+        output = commitlog.generate_markdown(
+            sections, version="v1.0.0", date="2026-01-01"
+        )
         self.assertIn("[BREAKING]", output)
 
     def test_empty_sections(self):
-        output = commitlog.generate_markdown({}, version="v1.0.0", date="2026-01-01")
+        output = commitlog.generate_markdown(
+            {}, version="v1.0.0", date="2026-01-01"
+        )
         self.assertIn("## v1.0.0 (2026-01-01)", output)
 
     def test_with_repo_url(self):
-        sections = {
-            "features": [
-                {"description": "add feature", "scope": None, "short_hash": "abc1234", "hash": "abc1234567890", "is_breaking": False}
-            ]
-        }
+        sections = self._make_section("add feature")
         output = commitlog.generate_markdown(
-            sections, version="v1.0.0", date="2026-01-01",
-            repo_url="https://github.com/user/repo"
+            sections,
+            version="v1.0.0",
+            date="2026-01-01",
+            repo_url="https://github.com/user/repo",
         )
-        self.assertIn("https://github.com/user/repo/commit/abc1234567890", output)
+        self.assertIn(
+            "https://github.com/user/repo/commit/abc1234567890", output
+        )
 
 
 class TestGenerateText(unittest.TestCase):
@@ -311,10 +353,18 @@ class TestGenerateText(unittest.TestCase):
     def test_basic_text(self):
         sections = {
             "features": [
-                {"description": "add feature", "scope": "api", "short_hash": "abc1234", "hash": "abc1234567890", "is_breaking": False}
+                {
+                    "description": "add feature",
+                    "scope": "api",
+                    "short_hash": "abc1234",
+                    "hash": "abc1234567890",
+                    "is_breaking": False,
+                }
             ]
         }
-        output = commitlog.generate_text(sections, version="v1.0.0", date="2026-01-01")
+        output = commitlog.generate_text(
+            sections, version="v1.0.0", date="2026-01-01"
+        )
         self.assertIn("v1.0.0 (2026-01-01)", output)
         self.assertIn("Features:", output)
         self.assertIn("[api] add feature", output)
@@ -322,10 +372,18 @@ class TestGenerateText(unittest.TestCase):
     def test_no_scope(self):
         sections = {
             "features": [
-                {"description": "add feature", "scope": None, "short_hash": "a", "hash": "a", "is_breaking": False}
+                {
+                    "description": "add feature",
+                    "scope": None,
+                    "short_hash": "a",
+                    "hash": "a",
+                    "is_breaking": False,
+                }
             ]
         }
-        output = commitlog.generate_text(sections, version="v1.0.0", date="2026-01-01")
+        output = commitlog.generate_text(
+            sections, version="v1.0.0", date="2026-01-01"
+        )
         self.assertIn("add feature", output)
 
 
@@ -335,17 +393,29 @@ class TestGenerateJson(unittest.TestCase):
     def test_basic_json(self):
         sections = {
             "features": [
-                {"description": "add feature", "scope": "api", "short_hash": "abc1234", "hash": "abc1234567890", "author": "test", "date": "2026-01-01", "is_breaking": False}
+                {
+                    "description": "add feature",
+                    "scope": "api",
+                    "short_hash": "abc1234",
+                    "hash": "abc1234567890",
+                    "author": "test",
+                    "date": "2026-01-01",
+                    "is_breaking": False,
+                }
             ]
         }
-        output = commitlog.generate_json(sections, version="v1.0.0", date="2026-01-01")
+        output = commitlog.generate_json(
+            sections, version="v1.0.0", date="2026-01-01"
+        )
         parsed = json.loads(output)
         self.assertEqual(parsed["version"], "v1.0.0")
         self.assertIn("features", parsed["sections"])
         self.assertEqual(parsed["sections"]["features"][0]["scope"], "api")
 
     def test_empty_json(self):
-        output = commitlog.generate_json({}, version="v1.0.0", date="2026-01-01")
+        output = commitlog.generate_json(
+            {}, version="v1.0.0", date="2026-01-01"
+        )
         parsed = json.loads(output)
         self.assertEqual(parsed["sections"], {})
 
@@ -439,22 +509,34 @@ class TestInitCommand(unittest.TestCase):
 class TestGenerateCommand(unittest.TestCase):
     """Test generate command with mocks."""
 
+    def _make_args(self, fmt="markdown", **kwargs):
+        defaults = dict(
+            since=None,
+            until=None,
+            path=None,
+            format=fmt,
+            output=None,
+            scope_filter=None,
+            no_group=False,
+            include_body=False,
+        )
+        defaults.update(kwargs)
+        return argparse.Namespace(**defaults)
+
+    def _mock_commit(self, subject="feat: add feature", h="a"):
+        return {
+            "subject": subject,
+            "hash": h * 40,
+            "short_hash": h * 7,
+            "author": "test",
+            "date": "2026-01-01",
+        }
+
     def test_generate_command_markdown(self):
         """Test generate command with markdown output."""
         with patch("commitlog.get_commits") as mock_commits:
-            mock_commits.return_value = [
-                {"subject": "feat: add feature", "hash": "a" * 40, "short_hash": "a" * 7, "author": "test", "date": "2026-01-01"},
-            ]
-            args = argparse.Namespace(
-                since=None,
-                until=None,
-                path=None,
-                format="markdown",
-                output=None,
-                scope_filter=None,
-                no_group=False,
-                include_body=False,
-            )
+            mock_commits.return_value = [self._mock_commit()]
+            args = self._make_args("markdown")
             with patch("commitlog.load_config", return_value={}):
                 with patch("builtins.print") as mock_print:
                     commitlog.generate_command(args)
@@ -463,19 +545,8 @@ class TestGenerateCommand(unittest.TestCase):
     def test_generate_command_json(self):
         """Test generate command with JSON output."""
         with patch("commitlog.get_commits") as mock_commits:
-            mock_commits.return_value = [
-                {"subject": "feat: add feature", "hash": "a" * 40, "short_hash": "a" * 7, "author": "test", "date": "2026-01-01"},
-            ]
-            args = argparse.Namespace(
-                since=None,
-                until=None,
-                path=None,
-                format="json",
-                output=None,
-                scope_filter=None,
-                no_group=False,
-                include_body=False,
-            )
+            mock_commits.return_value = [self._mock_commit()]
+            args = self._make_args("json")
             with patch("commitlog.load_config", return_value={}):
                 with patch("builtins.print") as mock_print:
                     commitlog.generate_command(args)
@@ -484,19 +555,8 @@ class TestGenerateCommand(unittest.TestCase):
     def test_generate_command_text(self):
         """Test generate command with text output."""
         with patch("commitlog.get_commits") as mock_commits:
-            mock_commits.return_value = [
-                {"subject": "feat: add feature", "hash": "a" * 40, "short_hash": "a" * 7, "author": "test", "date": "2026-01-01"},
-            ]
-            args = argparse.Namespace(
-                since=None,
-                until=None,
-                path=None,
-                format="text",
-                output=None,
-                scope_filter=None,
-                no_group=False,
-                include_body=False,
-            )
+            mock_commits.return_value = [self._mock_commit()]
+            args = self._make_args("text")
             with patch("commitlog.load_config", return_value={}):
                 with patch("builtins.print") as mock_print:
                     commitlog.generate_command(args)
@@ -505,23 +565,14 @@ class TestGenerateCommand(unittest.TestCase):
     def test_generate_command_with_output_file(self):
         """Test generate command writes to file."""
         with patch("commitlog.get_commits") as mock_commits:
-            mock_commits.return_value = [
-                {"subject": "feat: add feature", "hash": "a" * 40, "short_hash": "a" * 7, "author": "test", "date": "2026-01-01"},
-            ]
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+            mock_commits.return_value = [self._mock_commit()]
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".md", delete=False
+            ) as f:
                 output_path = f.name
 
             try:
-                args = argparse.Namespace(
-                    since=None,
-                    until=None,
-                    path=None,
-                    format="markdown",
-                    output=output_path,
-                    scope_filter=None,
-                    no_group=False,
-                    include_body=False,
-                )
+                args = self._make_args("markdown", output=output_path)
                 with patch("commitlog.load_config", return_value={}):
                     commitlog.generate_command(args)
 
@@ -535,19 +586,10 @@ class TestGenerateCommand(unittest.TestCase):
         """Test generate command with scope filter."""
         with patch("commitlog.get_commits") as mock_commits:
             mock_commits.return_value = [
-                {"subject": "feat(api): add feature", "hash": "a" * 40, "short_hash": "a" * 7, "author": "test", "date": "2026-01-01"},
-                {"subject": "feat(ui): add button", "hash": "b" * 40, "short_hash": "b" * 7, "author": "test", "date": "2026-01-02"},
+                self._mock_commit("feat(api): add feature", "a"),
+                self._mock_commit("feat(ui): add button", "b"),
             ]
-            args = argparse.Namespace(
-                since=None,
-                until=None,
-                path=None,
-                format="markdown",
-                output=None,
-                scope_filter="api",
-                no_group=False,
-                include_body=False,
-            )
+            args = self._make_args("markdown", scope_filter="api")
             with patch("commitlog.load_config", return_value={}):
                 with patch("builtins.print") as mock_print:
                     commitlog.generate_command(args)
@@ -559,19 +601,10 @@ class TestGenerateCommand(unittest.TestCase):
         """Test generate command without grouping."""
         with patch("commitlog.get_commits") as mock_commits:
             mock_commits.return_value = [
-                {"subject": "feat: add feature", "hash": "a" * 40, "short_hash": "a" * 7, "author": "test", "date": "2026-01-01"},
-                {"subject": "fix: bug fix", "hash": "b" * 40, "short_hash": "b" * 7, "author": "test", "date": "2026-01-02"},
+                self._mock_commit("feat: add feature", "a"),
+                self._mock_commit("fix: bug fix", "b"),
             ]
-            args = argparse.Namespace(
-                since=None,
-                until=None,
-                path=None,
-                format="markdown",
-                output=None,
-                scope_filter=None,
-                no_group=True,
-                include_body=False,
-            )
+            args = self._make_args("markdown", no_group=True)
             with patch("commitlog.load_config", return_value={}):
                 with patch("builtins.print") as mock_print:
                     commitlog.generate_command(args)
@@ -583,19 +616,8 @@ class TestGenerateCommand(unittest.TestCase):
         """Test generate command with last_tag as since."""
         with patch("commitlog.get_commits") as mock_commits:
             with patch("commitlog.get_last_tag", return_value="v1.0.0"):
-                mock_commits.return_value = [
-                    {"subject": "feat: add feature", "hash": "a" * 40, "short_hash": "a" * 7, "author": "test", "date": "2026-01-01"},
-                ]
-                args = argparse.Namespace(
-                    since="last_tag",
-                    until=None,
-                    path=None,
-                    format="markdown",
-                    output=None,
-                    scope_filter=None,
-                    no_group=False,
-                    include_body=False,
-                )
+                mock_commits.return_value = [self._mock_commit()]
+                args = self._make_args("markdown", since="last_tag")
                 with patch("commitlog.load_config", return_value={}):
                     commitlog.generate_command(args)
                     # Verify get_commits was called with the tag
@@ -607,13 +629,22 @@ class TestGenerateCommand(unittest.TestCase):
 class TestEndToEnd(unittest.TestCase):
     """End-to-end tests."""
 
+    def _make_commit(self, subject, h="a"):
+        return {
+            "subject": subject,
+            "hash": h * 40,
+            "short_hash": h * 7,
+            "author": "test",
+            "date": "2026-01-01",
+        }
+
     def test_full_workflow(self):
         """Test full commit processing workflow."""
         commits = [
-            {"subject": "feat: add user API", "hash": "a" * 40, "short_hash": "a" * 7, "author": "test", "date": "2026-01-01"},
-            {"subject": "fix: resolve login bug", "hash": "b" * 40, "short_hash": "b" * 7, "author": "test", "date": "2026-01-02"},
-            {"subject": "docs: update README", "hash": "c" * 40, "short_hash": "c" * 7, "author": "test", "date": "2026-01-03"},
-            {"subject": "chore: cleanup", "hash": "d" * 40, "short_hash": "d" * 7, "author": "test", "date": "2026-01-04"},
+            self._make_commit("feat: add user API"),
+            self._make_commit("fix: resolve login bug", "b"),
+            self._make_commit("docs: update README", "c"),
+            self._make_commit("chore: cleanup", "d"),
         ]
 
         sections = commitlog.classify_commits(commits)
@@ -622,20 +653,31 @@ class TestEndToEnd(unittest.TestCase):
         self.assertEqual(len(sections["docs"]), 1)
         self.assertEqual(len(sections["other"]), 1)
 
-        markdown = commitlog.generate_markdown(sections, version="v1.0.0", date="2026-01-01")
+        markdown = commitlog.generate_markdown(
+            sections, version="v1.0.0", date="2026-01-01"
+        )
         self.assertIn("Features", markdown)
         self.assertIn("Bug Fixes", markdown)
         self.assertIn("Documentation", markdown)
         self.assertIn("Other", markdown)
 
-        json_output = commitlog.generate_json(sections, version="v1.0.0", date="2026-01-01")
+        json_output = commitlog.generate_json(
+            sections, version="v1.0.0", date="2026-01-01"
+        )
         parsed = json.loads(json_output)
         self.assertEqual(len(parsed["sections"]["features"]), 1)
 
     def test_breaking_change_body_workflow(self):
         """Test that BREAKING CHANGE: in body is detected."""
         commits = [
-            {"subject": "feat: add feature", "hash": "a" * 40, "short_hash": "a" * 7, "author": "test", "date": "2026-01-01", "body": "Details\n\nBREAKING CHANGE: old API removed"},
+            {
+                "subject": "feat: add feature",
+                "hash": "a" * 40,
+                "short_hash": "a" * 7,
+                "author": "test",
+                "date": "2026-01-01",
+                "body": "Details\n\nBREAKING CHANGE: old API removed",
+            }
         ]
         sections = commitlog.classify_commits(commits)
         self.assertTrue(sections["features"][0]["is_breaking"])
