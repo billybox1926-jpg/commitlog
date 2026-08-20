@@ -1,0 +1,6 @@
+{
+  "grouping": true,
+  "default_since": "last_tag",
+  "default_format": "markdown",
+  "ignored_scopes": ["chore"]
+}
